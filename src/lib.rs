@@ -24,7 +24,7 @@ impl<Key> ValidationError<Key> {
     pub fn new(key: Key) -> Self {
         Self {
             key,
-            message: Rc::new(|_| format!("Validation error")),
+            message: Rc::new(|_| "Validation error".to_string()),
         }
     }
 
@@ -87,7 +87,7 @@ where
             .map(|error| (*error).clone())
             .collect();
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             Some(ValidationErrors::new(errors))
         } else {
             None
@@ -160,6 +160,8 @@ impl<Value, Key> PartialEq for Validator<Value, Key> {
 
             for (i, this_validation) in self.validations.iter().enumerate() {
                 let other_validation = other.validations.get(i).unwrap();
+                
+                // TODO: #1 refactor this to solve clippy warning https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
                 all_validations_same &= Rc::ptr_eq(this_validation, other_validation);
             }
 
@@ -211,7 +213,7 @@ where
             }
         }
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
@@ -239,7 +241,7 @@ where
         }
     }
 
-    if all_errors.len() > 0 {
+    if !all_errors.is_empty() {
         Err(all_errors)
     } else {
         Ok(())
