@@ -122,7 +122,24 @@ impl<Key> Display for ValidationErrors<Key> {
 
 impl<Key> std::error::Error for ValidationErrors<Key> where Key: std::fmt::Debug {}
 
-pub type ValidatorFn<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>;
+pub struct ValidatorFn<Value, Key> {
+    function: Box<dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>>,
+    id: uuid::Uuid,
+}
+
+impl<Value, Key> ValidatorFn<Value, Key> {
+    pub fn new<F>(function: F) -> Self
+    where
+        F: Fn(&Value, &Key) -> Result<(), ValidationError<Key>> + 'static,
+    {
+        Self {
+            function: Box::new(function),
+            id: uuid::Uuid::new_v4(),
+        }
+    }
+}
+
+impl<Value, Key> PartialEq for ValidatorFn<>
 
 pub trait Validatable<Key> {
     fn validate(&self) -> Result<(), ValidationErrors<Key>>;
@@ -138,12 +155,12 @@ pub trait Validation<Value, Key> {
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>>;
 }
 
-impl<Value, Key> Validation<Value, Key> for dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>
+impl<Value, Key> Validation<Value, Key> for ValidatorFn<Value, Key>
 where
     Key: Clone + PartialEq,
 {
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>> {
-        (self)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
+        (self.function)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
     }
 }
 
@@ -195,7 +212,7 @@ impl<Value, Key> Validator<Value, Key> {
         mut self,
         function: F,
     ) -> Self {
-        self.validations.push(Rc::new(function));
+        self.validations.push(Rc::new(ValidatorFn::new(function)));
         self
     }
 }
