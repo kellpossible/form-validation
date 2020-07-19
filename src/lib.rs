@@ -160,7 +160,7 @@ impl<Value, Key> PartialEq for Validator<Value, Key> {
 
             for (i, this_validation) in self.validations.iter().enumerate() {
                 let other_validation = other.validations.get(i).unwrap();
-                
+
                 // TODO: #1 refactor this to solve clippy warning https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
                 all_validations_same &= Rc::ptr_eq(this_validation, other_validation);
             }
