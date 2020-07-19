@@ -10,3 +10,6 @@ categories = ["gui"]
 
 [badges]
 maintenance = { status = "actively-developed" }
+
+[dependencies]
+uuid = { version = "0.8", features = ["v4"] }

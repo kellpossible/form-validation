@@ -122,7 +122,30 @@ impl<Key> Display for ValidationErrors<Key> {
 
 impl<Key> std::error::Error for ValidationErrors<Key> where Key: std::fmt::Debug {}
 
-pub type ValidatorFn<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>;
+type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>;
+
+pub struct ValidatorFn<Value, Key> {
+    function: Box<ValidatorFnTraitObject<Value, Key>>,
+    id: uuid::Uuid,
+}
+
+impl<Value, Key> ValidatorFn<Value, Key> {
+    pub fn new<F>(function: F) -> Self
+    where
+        F: Fn(&Value, &Key) -> Result<(), ValidationError<Key>> + 'static,
+    {
+        Self {
+            function: Box::new(function),
+            id: uuid::Uuid::new_v4(),
+        }
+    }
+}
+
+impl<Value, Key> PartialEq for ValidatorFn<Value, Key> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
 
 pub trait Validatable<Key> {
     fn validate(&self) -> Result<(), ValidationErrors<Key>>;
@@ -138,12 +161,12 @@ pub trait Validation<Value, Key> {
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>>;
 }
 
-impl<Value, Key> Validation<Value, Key> for dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>
+impl<Value, Key> Validation<Value, Key> for ValidatorFn<Value, Key>
 where
     Key: Clone + PartialEq,
 {
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>> {
-        (self)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
+        (self.function)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
     }
 }
 
@@ -161,8 +184,7 @@ impl<Value, Key> PartialEq for Validator<Value, Key> {
             for (i, this_validation) in self.validations.iter().enumerate() {
                 let other_validation = other.validations.get(i).unwrap();
 
-                // TODO: #1 refactor this to solve clippy warning https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
-                all_validations_same &= Rc::ptr_eq(this_validation, other_validation);
+                all_validations_same &= this_validation == other_validation;
             }
 
             all_validations_same
@@ -195,7 +217,7 @@ impl<Value, Key> Validator<Value, Key> {
         mut self,
         function: F,
     ) -> Self {
-        self.validations.push(Rc::new(function));
+        self.validations.push(Rc::new(ValidatorFn::new(function)));
         self
     }
 }
