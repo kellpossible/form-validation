@@ -3,3 +3,8 @@
 A Rust library for validating forms, and allowing validation logic to be shared.
 
 [Changelog](https://github.com/kellpossible/form-validation/releases)
+
+## Optional Features
+
++ `"stdweb-support"` - enable support for [stdweb](https://crates.io/crates/stdweb) on the `wasm32-unknown-unknown` flatform.
++ `"wasm-bindgen-support"` - enable for [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the `wasm32-unknown-unknown` flatform.

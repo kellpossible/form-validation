@@ -6,6 +6,15 @@
 //! implementation use a [Validator](Validator) for each field in the
 //! form, and concatinating the results with
 //! [concat_results()](concat_results()).
+//!
+//! ## Optional Features
+//!
+//! + `"stdweb-support"` - enable support for
+//!   [stdweb](https://crates.io/crates/stdweb) on the
+//!   `wasm32-unknown-unknown` flatform.
+//! + `"wasm-bindgen-support"` - enable for
+//!   [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the
+//!   `wasm32-unknown-unknown` flatform.
 
 use uuid::Uuid;
 use std::{
