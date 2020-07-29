@@ -7,6 +7,7 @@
 //! form, and concatinating the results with
 //! [concat_results()](concat_results()).
 
+use uuid::Uuid;
 use std::{
     fmt::{Debug, Display},
     rc::Rc,
@@ -195,7 +196,7 @@ type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), Val
 /// ```
 pub struct ValidatorFn<Value, Key> {
     function: Rc<ValidatorFnTraitObject<Value, Key>>,
-    id: uuid::Uuid,
+    id: Uuid,
 }
 
 impl<Value, Key> ValidatorFn<Value, Key> {
@@ -206,7 +207,7 @@ impl<Value, Key> ValidatorFn<Value, Key> {
     {
         Self {
             function: Rc::new(function),
-            id: uuid::Uuid::new_v4(),
+            id: Uuid::new_v4(),
         }
     }
 }
