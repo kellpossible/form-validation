@@ -15,7 +15,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 uuid = { version = "0.8", features = ["v4"] }
-wasm-bindgen = { version = "0.2.67", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 stdweb = { verions = "0.4", optional = true }
 
 [features]
