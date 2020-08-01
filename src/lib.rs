@@ -16,11 +16,11 @@
 //!   [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the
 //!   `wasm32-unknown-unknown` flatform.
 
-use uuid::Uuid;
 use std::{
     fmt::{Debug, Display},
     rc::Rc,
 };
+use uuid::Uuid;
 
 /// An error associated with a form field.
 pub struct ValidationError<Key> {
@@ -74,8 +74,8 @@ impl<Key> ValidationError<Key> {
     ///
     /// assert_eq!("The value of field1 (-10) cannot be less than 0", error.to_string());
     /// ```
-    pub fn with_message<F: Fn(&Key) -> String + 'static>(mut self, message: F) -> Self {
-        self.message = Rc::new(message);
+    pub fn with_message<F: Fn(&Key) -> String + 'static>(mut self, message_fn: F) -> Self {
+        self.message = Rc::new(message_fn);
         self
     }
 
@@ -352,6 +352,12 @@ impl<Value, Key> Validator<Value, Key> {
         function: F,
     ) -> Self {
         self.validations.push(Rc::new(ValidatorFn::new(function)));
+        self
+    }
+
+    /// A factory method to add a [ValidatorFn] to this validator.
+    pub fn validator_fn(mut self, validator_fn: ValidatorFn<Value, Key>) -> Self {
+        self.validations.push(Rc::new(validator_fn));
         self
     }
 }
