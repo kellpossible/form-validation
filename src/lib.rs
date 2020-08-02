@@ -11,10 +11,10 @@
 //!
 //! + `"stdweb-support"` - enable support for
 //!   [stdweb](https://crates.io/crates/stdweb) on the
-//!   `wasm32-unknown-unknown` flatform.
+//!   `wasm32-unknown-unknown` platform.
 //! + `"wasm-bindgen-support"` - enable for
 //!   [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the
-//!   `wasm32-unknown-unknown` flatform.
+//!   `wasm32-unknown-unknown` platform.
 
 use std::{
     fmt::{Debug, Display},
