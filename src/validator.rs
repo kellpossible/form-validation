@@ -37,7 +37,7 @@ type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), Val
 /// );
 /// ```
 pub struct ValidatorFn<Value, Key> {
-    function: Rc<ValidatorFnTraitObject<Value, Key>>,
+    closure: Rc<ValidatorFnTraitObject<Value, Key>>,
     id: Uuid,
 }
 
@@ -48,8 +48,17 @@ impl<Value, Key> ValidatorFn<Value, Key> {
         C: Fn(&Value, &Key) -> Result<(), ValidationError<Key>> + 'static,
     {
         Self {
-            function: Rc::new(closure),
+            closure: Rc::new(closure),
             id: Uuid::new_v4(),
+        }
+    }
+}
+
+impl<Value, Key> Clone for ValidatorFn<Value, Key> {
+    fn clone(&self) -> Self {
+        Self {
+            closure: Rc::clone(&self.closure),
+            id: self.id.clone(),
         }
     }
 }
@@ -70,7 +79,7 @@ where
 }
 
 pub struct AsyncValidatorFn<Value, Key> {
-    future: RefCell<Pin<Box<dyn Future<Output = ValidatorFn<Value, Key>>>>>,
+    future_producer: Rc<dyn Fn() -> Pin<Box<dyn Future<Output = ValidatorFn<Value, Key>>>>>,
     key_type: PhantomData<Key>,
     value_type: PhantomData<Value>,
 }
@@ -80,13 +89,13 @@ where
     Key: Clone + PartialEq,
     Value: Clone + PartialEq,
 {
-    /// Takes a future `F` that produces a [ValidatorFn] closure.
-    pub fn new<F>(future: F) -> Self
+    /// Takes a closure that produces a `Future` that produces a [ValidatorFn] closure.
+    pub fn new<C>(closure: C) -> Self
     where
-        F: Future<Output = ValidatorFn<Value, Key>> + 'static,
+        C: Fn() -> Pin<Box<dyn Future<Output = ValidatorFn<Value, Key>>>> + 'static,
     {
         Self {
-            future: RefCell::new(Box::pin(future)),
+            future_producer: Rc::new(closure),
             key_type: PhantomData,
             value_type: PhantomData,
         }
@@ -99,18 +108,25 @@ where
         value: &Value,
         key: &Key,
     ) -> Result<(), ValidationErrors<Key>> {
-        let validator_fn: ValidatorFn<Value, Key> = self.future.borrow_mut().as_mut().await;
+        let future = (self.future_producer)();
+        let validator_fn: ValidatorFn<Value, Key> = future.await;
         validator_fn.validate_value(value, key)
     }
 }
 
-impl<Value, Key> Into<AsyncValidatorFn<Value, Key>> for ValidatorFn<Value, Key>
+impl <Value, Key> From<ValidatorFn<Value, Key>> for AsyncValidatorFn<Value, Key> 
 where
     Key: Clone + PartialEq + 'static,
-    Value: Clone + PartialEq + 'static,
-{
-    fn into(self) -> AsyncValidatorFn<Value, Key> {
-        AsyncValidatorFn::new(async { self })
+    Value: Clone + PartialEq + 'static, {
+    fn from(validator_fn: ValidatorFn<Value, Key>) -> Self {
+        Self::new(move || {
+            let new_fn = validator_fn.clone();
+            Box::pin(
+                async {
+                    new_fn
+                }
+            )
+        })
     }
 }
 
@@ -119,7 +135,7 @@ where
     Key: Clone + PartialEq,
 {
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>> {
-        (self.function)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
+        (self.closure)(value, key).map_err(|err| ValidationErrors::new(vec![err]))
     }
 }
 
