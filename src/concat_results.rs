@@ -1,4 +1,3 @@
-
 use crate::ValidationErrors;
 
 /// Join validation results, concatinating any errors they may

@@ -1,4 +1,7 @@
-use std::{rc::Rc, fmt::{Display, Debug}};
+use std::{
+    fmt::{Debug, Display},
+    rc::Rc,
+};
 
 /// An error associated with a form field.
 pub struct ValidationError<Key> {

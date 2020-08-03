@@ -16,14 +16,14 @@
 //!   [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the
 //!   `wasm32-unknown-unknown` platform.
 
-mod error;
-mod validator;
-mod validation;
-mod validatable;
 mod concat_results;
+mod error;
+mod validatable;
+mod validation;
+mod validator;
 
-pub use error::*;
-pub use validator::*;
-pub use validation::*;
-pub use validatable::*;
 pub use concat_results::concat_results;
+pub use error::*;
+pub use validatable::*;
+pub use validation::*;
+pub use validator::*;

@@ -1,5 +1,4 @@
-
-use crate::{ValidatorFn, ValidationErrors};
+use crate::{ValidationErrors, ValidatorFn};
 
 /// A function/struct/item that can perform validation on an item with
 /// a given `Value` type.
@@ -9,4 +8,3 @@ pub trait Validation<Value, Key> {
     /// [ValidationErrors](ValidationErrors) if there are any.
     fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>>;
 }
-
