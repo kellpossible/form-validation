@@ -1,9 +1,12 @@
 use crate::{Validation, ValidationError, ValidationErrors};
-use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, fmt::Debug, future::Future, marker::PhantomData, pin::Pin, rc::Rc};
 use uuid::Uuid;
 
 // TODO: make this optional
-use futures::{future::join_all, stream::{self, StreamExt}};
+use futures::{
+    future::join_all,
+    stream::{self, StreamExt},
+};
 
 type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), ValidationError<Key>>;
 
@@ -114,18 +117,15 @@ where
     }
 }
 
-impl <Value, Key> From<ValidatorFn<Value, Key>> for AsyncValidatorFn<Value, Key> 
+impl<Value, Key> From<ValidatorFn<Value, Key>> for AsyncValidatorFn<Value, Key>
 where
     Key: Clone + PartialEq + 'static,
-    Value: Clone + PartialEq + 'static, {
+    Value: Clone + PartialEq + 'static,
+{
     fn from(validator_fn: ValidatorFn<Value, Key>) -> Self {
         Self::new(move || {
             let new_fn = validator_fn.clone();
-            Box::pin(
-                async {
-                    new_fn
-                }
-            )
+            Box::pin(async { new_fn })
         })
     }
 }
@@ -264,10 +264,11 @@ pub struct AsyncValidator<Value, Key> {
     pub validations: Vec<AsyncValidatorFn<Value, Key>>,
 }
 
-impl<Value, Key> AsyncValidator<Value, Key> 
+impl<Value, Key> AsyncValidator<Value, Key>
 where
     Key: Clone + PartialEq,
-    Value: Clone + PartialEq,{
+    Value: Clone + PartialEq,
+{
     /// Create a new `Validator`.
     pub fn new() -> Self {
         Self {
@@ -284,12 +285,18 @@ where
         self
     }
 
-    pub async fn validate_value(&self, value: &Value, key: &Key) -> Result<(), ValidationErrors<Key>> {
+    pub async fn validate_value(
+        &self,
+        value: &Value,
+        key: &Key,
+    ) -> Result<(), ValidationErrors<Key>> {
         let mut errors = ValidationErrors::default();
 
-        let futures = self.validations.iter().map(|async_validator_fn| {
-            async_validator_fn.validate_value(value, key)
-        }).collect::<Vec<_>>();
+        let futures = self
+            .validations
+            .iter()
+            .map(|async_validator_fn| async_validator_fn.validate_value(value, key))
+            .collect::<Vec<_>>();
 
         // Execute all the futures concurrently
         let results: Vec<Result<(), ValidationErrors<Key>>> = join_all(futures).await;
