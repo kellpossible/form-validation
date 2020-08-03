@@ -82,7 +82,8 @@ where
 }
 
 pub struct AsyncValidatorFn<Value, Key> {
-    future_producer: Rc<dyn Fn() -> Pin<Box<dyn Future<Output = ValidatorFn<Value, Key>>>>>,
+    future_producer: Rc<dyn Fn(&Value, &Key) -> Pin<Box<dyn Future<Output = Result<(), ValidationErrors<Key>>>>>>,
+    id: Uuid,
     key_type: PhantomData<Key>,
     value_type: PhantomData<Value>,
 }
@@ -95,10 +96,11 @@ where
     /// Takes a closure that produces a `Future` that produces a [ValidatorFn] closure.
     pub fn new<C>(closure: C) -> Self
     where
-        C: Fn() -> Pin<Box<dyn Future<Output = ValidatorFn<Value, Key>>>> + 'static,
+        C: Fn(&Value, &Key) -> Pin<Box<dyn Future<Output = Result<(), ValidationErrors<Key>>>>> + 'static,
     {
         Self {
             future_producer: Rc::new(closure),
+            id: Uuid::new_v4(),
             key_type: PhantomData,
             value_type: PhantomData,
         }
@@ -111,9 +113,8 @@ where
         value: &Value,
         key: &Key,
     ) -> Result<(), ValidationErrors<Key>> {
-        let future = (self.future_producer)();
-        let validator_fn: ValidatorFn<Value, Key> = future.await;
-        validator_fn.validate_value(value, key)
+        let future = (self.future_producer)(value, key);
+        future.await
     }
 }
 
@@ -123,10 +124,35 @@ where
     Value: Clone + PartialEq + 'static,
 {
     fn from(validator_fn: ValidatorFn<Value, Key>) -> Self {
-        Self::new(move || {
+        Self::new(move |value, key| {
+            let value_clone = value.clone();
+            let key_clone = key.clone();
             let new_fn = validator_fn.clone();
-            Box::pin(async { new_fn })
+            Box::pin(async move { new_fn.validate_value(&value_clone, &key_clone) })
         })
+    }
+}
+
+impl<Value, Key> PartialEq for AsyncValidatorFn<Value, Key> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<Value, Key> Clone for AsyncValidatorFn<Value, Key> {
+    fn clone(&self) -> Self {
+        Self {
+            future_producer: Rc::clone(&self.future_producer),
+            id: self.id,
+            key_type: PhantomData,
+            value_type: PhantomData,
+        }
+    }
+}
+
+impl<Value, Key> Debug for AsyncValidatorFn<Value, Key> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AsyncValidatorFn({:p})", self.future_producer)
     }
 }
 
@@ -260,6 +286,7 @@ impl<Value, Key> Default for Validator<Value, Key> {
     }
 }
 
+#[derive(Clone, PartialEq)]
 pub struct AsyncValidator<Value, Key> {
     pub validations: Vec<AsyncValidatorFn<Value, Key>>,
 }
@@ -312,5 +339,65 @@ where
         } else {
             Ok(())
         }
+    }
+}
+
+impl<Value, Key> Debug for AsyncValidator<Value, Key> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let validation_addresses: Vec<String> = self
+            .validations
+            .iter()
+            .map(|validation| format!("{:?}", validation))
+            .collect();
+
+        write!(f, "Validator{{{0}}}", validation_addresses.join(", "))
+    }
+}
+
+impl<Value, Key> Default for AsyncValidator<Value, Key>
+where
+    Key: Clone + PartialEq,
+    Value: Clone + PartialEq,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{AsyncValidatorFn, Validation, ValidationError};
+    use crate::ValidatorFn;
+
+    #[test]
+    fn async_validator_fn() {
+        let v = AsyncValidatorFn::new(|| {
+            Box::pin(async {
+                // perform actions here that require async
+                ValidatorFn::new(|value, key: &String| {
+                    if value < &0 {
+                        let value_clone = *value;
+                        Err(ValidationError::new(key.clone()).with_message(move |key| {
+                            format!(
+                                "The value of {} ({}) cannot be less than 0",
+                                key, value_clone
+                            )
+                        }))
+                    } else {
+                        Ok(())
+                    }
+                })
+            })
+        });
+
+        let key = "field1".to_string();
+        assert!(futures::executor::block_on(v.validate_value(&20, &key)).is_ok());
+        assert!(futures::executor::block_on(v.validate_value(&-1, &key)).is_err());
+        assert_eq!(
+            "The value of field1 (-1) cannot be less than 0",
+            futures::executor::block_on(v.validate_value(&-1, &key))
+                .unwrap_err()
+                .to_string()
+        );
     }
 }

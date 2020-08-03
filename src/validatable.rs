@@ -1,4 +1,6 @@
 use crate::ValidationErrors;
+use futures::Future;
+use std::pin::Pin;
 
 /// An item that can be validated.
 pub trait Validatable<Key> {
@@ -14,5 +16,22 @@ pub trait Validatable<Key> {
             Ok(()) => ValidationErrors::default(),
             Err(errors) => errors,
         }
+    }
+}
+
+pub trait AsyncValidatable<Key>
+where
+    Key: 'static,
+{
+    fn validate_future(&self) -> Pin<Box<dyn Future<Output = Result<(), ValidationErrors<Key>>>>>;
+    fn validate_future_or_empty(&self) -> Pin<Box<dyn Future<Output = ValidationErrors<Key>>>> {
+        let future = self.validate_future();
+        Box::pin(async move {
+            let result: Result<(), ValidationErrors<Key>> = future.await;
+            match result {
+                Ok(()) => ValidationErrors::default(),
+                Err(errors) => errors,
+            }
+        })
     }
 }
