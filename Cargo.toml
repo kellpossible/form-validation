@@ -8,7 +8,7 @@ license = "MIT"
 name = "form-validation"
 readme = "README.md"
 repository = "https://github.com/kellpossible/form-validation"
-version = "0.1.2"
+version = "0.2.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -17,8 +17,14 @@ maintenance = { status = "actively-developed" }
 uuid = { version = "0.8", features = ["v4"] }
 wasm-bindgen = { version = "0.2", optional = true }
 stdweb = { version = "0.4", optional = true }
+futures = { version = "0.3", optional = true }
 
 [features]
 default = []
 wasm-bindgen-support = ["wasm-bindgen", "uuid/wasm-bindgen"]
 stdweb-support = ["stdweb", "uuid/stdweb"]
+async = ["futures"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

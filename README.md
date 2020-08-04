@@ -8,3 +8,4 @@ A Rust library for validating forms, and allowing validation logic to be shared.
 
 + `"stdweb-support"` - enable support for [stdweb](https://crates.io/crates/stdweb) on the `wasm32-unknown-unknown` platform.
 + `"wasm-bindgen-support"` - enable for [wasm-bindgen](https://crates.io/crates/wasm-bindgen) on the `wasm32-unknown-unknown` platform.
++ `"async"` - enable an asynchronous version of this API, and conversion traits from synchronous to asynchronous.
