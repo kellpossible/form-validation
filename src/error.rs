@@ -152,3 +152,12 @@ impl<Key> Display for ValidationErrors<Key> {
 }
 
 impl<Key> std::error::Error for ValidationErrors<Key> where Key: std::fmt::Debug {}
+
+impl<Key> From<ValidationError<Key>> for ValidationErrors<Key>
+where
+    Key: Clone + PartialEq,
+{
+    fn from(err: ValidationError<Key>) -> Self {
+        ValidationErrors::new(vec![err])
+    }
+}
