@@ -81,6 +81,12 @@ where
     }
 }
 
+impl<Value, Key> Debug for ValidatorFn<Value, Key> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ValidatorFn(closure: {:p}, id: {})", self.closure, self.id)
+    }
+}
+
 /// An function to perform validation on a field asynchonously.
 ///
 /// For the synchronous version, see [ValidationFn].
@@ -196,7 +202,7 @@ impl<Value, Key> Clone for AsyncValidatorFn<Value, Key> {
 
 impl<Value, Key> Debug for AsyncValidatorFn<Value, Key> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AsyncValidatorFn({:p})", self.future_producer)
+        write!(f, "AsyncValidatorFn(future_producer: {:p}, id: {})", self.future_producer, self.id)
     }
 }
 
@@ -250,9 +256,9 @@ where
 /// assert!(v.validate_value(&5, &key).is_ok());
 /// assert!(v.validate_value(&-1, &key).is_err());
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Validator<Value, Key> {
-    pub validations: Vec<Rc<ValidatorFn<Value, Key>>>,
+    pub validations: Vec<ValidatorFn<Value, Key>>,
 }
 
 impl<Value, Key> PartialEq for Validator<Value, Key> {
@@ -273,18 +279,6 @@ impl<Value, Key> PartialEq for Validator<Value, Key> {
     }
 }
 
-impl<Value, Key> Debug for Validator<Value, Key> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let validation_addresses: Vec<String> = self
-            .validations
-            .iter()
-            .map(|validation| format!("ValidatorFn: {:p}", *validation))
-            .collect();
-
-        write!(f, "Validator{{{0}}}", validation_addresses.join(", "))
-    }
-}
-
 impl<Value, Key> Validator<Value, Key> {
     /// Create a new `Validator`.
     pub fn new() -> Self {
@@ -298,7 +292,7 @@ impl<Value, Key> Validator<Value, Key> {
         mut self,
         validator_fn: F,
     ) -> Self {
-        self.validations.push(Rc::new(validator_fn.into()));
+        self.validations.push(validator_fn.into());
         self
     }
 }
@@ -378,7 +372,7 @@ impl<Value, Key> Default for Validator<Value, Key> {
 /// assert!(block_on(v.validate_value(&5, &key)).is_ok());
 /// assert!(block_on(v.validate_value(&-1, &key)).is_err());
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct AsyncValidator<Value, Key> {
     pub validations: Vec<AsyncValidatorFn<Value, Key>>,
 }
@@ -431,18 +425,6 @@ where
         } else {
             Ok(())
         }
-    }
-}
-
-impl<Value, Key> Debug for AsyncValidator<Value, Key> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let validation_addresses: Vec<String> = self
-            .validations
-            .iter()
-            .map(|validation| format!("{:?}", validation))
-            .collect();
-
-        write!(f, "Validator{{{0}}}", validation_addresses.join(", "))
     }
 }
 
