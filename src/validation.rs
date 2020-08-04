@@ -1,4 +1,4 @@
-use crate::{ValidationErrors, ValidatorFn};
+use crate::ValidationErrors;
 
 /// A function/struct/item that can perform validation on an item with
 /// a given `Value` type.

@@ -2,7 +2,7 @@ use crate::ValidationErrors;
 
 /// Join validation results, concatinating any errors they may
 /// contain. If any of the results are an `Err` it will return an
-/// `Err` containing all the errors from all th results.
+/// `Err` containing all the errors from all the results.
 ///
 /// ## Example
 /// ```
