@@ -1,6 +1,9 @@
 use crate::{Validation, ValidationErrors};
-use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, rc::Rc};
+use std::{fmt::Debug, rc::Rc};
 use uuid::Uuid;
+
+#[cfg(feature = "async")]
+use std::{future::Future, marker::PhantomData, pin::Pin};
 
 type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), ValidationErrors<Key>>;
 
@@ -55,7 +58,7 @@ impl<Value, Key> Clone for ValidatorFn<Value, Key> {
     fn clone(&self) -> Self {
         Self {
             closure: Rc::clone(&self.closure),
-            id: self.id.clone(),
+            id: self.id,
         }
     }
 }

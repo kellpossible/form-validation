@@ -1,5 +1,8 @@
-use crate::{AsyncValidatorFn, Validation, ValidationErrors, ValidatorFn};
+use crate::{Validation, ValidationErrors, ValidatorFn};
 use std::fmt::Debug;
+
+#[cfg(feature = "async")]
+use crate::AsyncValidatorFn;
 
 #[cfg(feature = "async")]
 use futures::future::join_all;
