@@ -83,7 +83,11 @@ where
 
 impl<Value, Key> Debug for ValidatorFn<Value, Key> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ValidatorFn(closure: {:p}, id: {})", self.closure, self.id)
+        write!(
+            f,
+            "ValidatorFn(closure: {:p}, id: {})",
+            self.closure, self.id
+        )
     }
 }
 
@@ -202,7 +206,11 @@ impl<Value, Key> Clone for AsyncValidatorFn<Value, Key> {
 
 impl<Value, Key> Debug for AsyncValidatorFn<Value, Key> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AsyncValidatorFn(future_producer: {:p}, id: {})", self.future_producer, self.id)
+        write!(
+            f,
+            "AsyncValidatorFn(future_producer: {:p}, id: {})",
+            self.future_producer, self.id
+        )
     }
 }
 
@@ -324,17 +332,16 @@ impl<Value, Key> Default for Validator<Value, Key> {
     }
 }
 
-
 /// Validates a particular type of value asynchronously, can contain
 /// many validation functions. Generally used with a single key for
 /// all contained validation functions.
-/// 
+///
 /// See [Validator] for the synchronous version.
 ///
 /// ```
 /// use form_validation::{AsyncValidator, ValidationError, AsyncValidatorFn, ValidatorFn};
 /// use futures::executor::block_on;
-/// 
+///
 /// let v: AsyncValidator<i32, String> = AsyncValidator::new()
 ///     .validation(AsyncValidatorFn::new(|value: &i32, key: &String| {
 ///         let value = *value;
@@ -438,10 +445,61 @@ where
     }
 }
 
+impl<Value, Key> From<Validator<Value, Key>> for AsyncValidator<Value, Key>
+where
+    Value: Clone + PartialEq + 'static,
+    Key: Clone + PartialEq + 'static,
+{
+    fn from(validator: Validator<Value, Key>) -> Self {
+        let mut async_validator: AsyncValidator<Value, Key> = AsyncValidator::new();
+
+        for validator_fn in validator.validations {
+            async_validator = async_validator.validation(validator_fn);
+        }
+
+        async_validator
+    }
+}
+
 #[cfg(test)]
 mod test {
-    #[test]
-    fn async_validator() {
+    use super::{ValidationError, Validator, AsyncValidator};
+    use futures::executor::block_on;
 
+    #[test]
+    fn async_validator_from_validator() {
+        let v: Validator<i32, String> = Validator::new()
+        .validation(|value: &i32, key: &String| {
+            if value < &0 {
+                let value_clone = *value;
+                Err(ValidationError::new(key.clone()).with_message(move |key| {
+                    format!(
+                        "The value of {} ({}) cannot be less than 0",
+                        key, value_clone
+                    )
+                }).into())
+            } else {
+                Ok(())
+            }
+        })
+        .validation(|value: &i32, key: &String| {
+            if value > &10 {
+                let value_clone = *value;
+                Err(ValidationError::new(key.clone()).with_message(move |key| {
+                    format!(
+                        "The value of {} ({}) cannot be greater than 10",
+                        key, value_clone
+                    )
+                }).into())
+            } else {
+                Ok(())
+            }
+        });
+
+        let av: AsyncValidator<i32, String> = v.into();
+        let key = "field1".to_string();
+        assert!(block_on(av.validate_value(&11, &key)).is_err());
+        assert!(block_on(av.validate_value(&5, &key)).is_ok());
+        assert!(block_on(av.validate_value(&-1, &key)).is_err());
     }
 }
