@@ -9,9 +9,9 @@ use crate::ValidationErrors;
 /// use form_validation::{concat_results, ValidationError, ValidationErrors};
 /// let results = vec![
 ///     Ok(()),
-///     Err(ValidationErrors::new(vec![ValidationError::new("field1")])),
-///     Err(ValidationErrors::new(vec![ValidationError::new("field1")])),
-///     Err(ValidationErrors::new(vec![ValidationError::new("field2")])),
+///     Err(ValidationErrors::new(vec![ValidationError::new("field1", "TEST_ERROR1")])),
+///     Err(ValidationErrors::new(vec![ValidationError::new("field1", "TEST_ERROR2")])),
+///     Err(ValidationErrors::new(vec![ValidationError::new("field2", "TEST_ERROR1")])),
 /// ];
 ///
 /// let result = concat_results(results);

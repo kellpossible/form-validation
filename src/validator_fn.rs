@@ -17,11 +17,12 @@ type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), Val
 /// let v: ValidatorFn<i32, String> = ValidatorFn::new(|value, key: &String| {
 ///     if value < &0 {
 ///         let value_clone = *value;
-///         Err(ValidationError::new(key.clone()).with_message(move |key| {
-///             format!(
-///                 "The value of {} ({}) cannot be less than 0",
-///                 key, value_clone
-///             )
+///         Err(ValidationError::new(key.clone(), "NOT_LESS_THAN_0")
+///                 .with_message(move |key| {
+///                     format!(
+///                         "The value of {} ({}) cannot be less than 0",
+///                         key, value_clone
+///                     )
 ///         }).into()) // convert into ValidationErrors
 ///     } else {
 ///         Ok(())
@@ -30,11 +31,14 @@ type ValidatorFnTraitObject<Value, Key> = dyn Fn(&Value, &Key) -> Result<(), Val
 ///
 /// let key = "field1".to_string();
 /// assert!(v.validate_value(&20, &key).is_ok());
-/// assert!(v.validate_value(&-1, &key).is_err());
+/// let errors = v.validate_value(&-1, &key).unwrap_err();
+/// assert_eq!(1, errors.len());
+/// let error = errors.errors.get(0).unwrap();
 /// assert_eq!(
 ///     "The value of field1 (-1) cannot be less than 0",
-///     v.validate_value(&-1, &key).unwrap_err().to_string()
+///     error.to_string()
 /// );
+/// assert_eq!("NOT_LESS_THAN_0", error.type_id);
 /// ```
 pub struct ValidatorFn<Value, Key> {
     closure: Rc<ValidatorFnTraitObject<Value, Key>>,
@@ -114,7 +118,7 @@ where
 ///         Box::pin(async move {
 ///             // perform actions here that require async
 ///             if value < 0 {
-///                 Err(ValidationError::new(key.clone())
+///                 Err(ValidationError::new(key.clone(), "NOT_LESS_THAN_0")
 ///                     .with_message(move |key| {
 ///                         format!(
 ///                             "The value of {} ({}) cannot be less than 0",
@@ -130,13 +134,15 @@ where
 ///
 /// let key = "field1".to_string();
 /// assert!(block_on(v.validate_value(&20, &key)).is_ok());
-/// assert!(block_on(v.validate_value(&-1, &key)).is_err());
+///
+/// let errors = block_on(v.validate_value(&-1, &key)).unwrap_err();
+/// assert_eq!(1, errors.len());
+/// let error = errors.errors.get(0).unwrap();
 /// assert_eq!(
 ///     "The value of field1 (-1) cannot be less than 0",
-///     block_on(v.validate_value(&-1, &key))
-///         .unwrap_err()
-///         .to_string()
+///     error.to_string()
 /// );
+/// assert_eq!("NOT_LESS_THAN_0", error.type_id);
 /// ```
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]

@@ -8,7 +8,7 @@ license = "MIT"
 name = "form-validation"
 readme = "README.md"
 repository = "https://github.com/kellpossible/form-validation"
-version = "0.2.0"
+version = "0.3.0"
 
 [badges]
 maintenance = { status = "actively-developed" }

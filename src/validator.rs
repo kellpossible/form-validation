@@ -19,11 +19,12 @@ use futures::future::join_all;
 /// .validation(|value: &i32, key: &String| {
 ///     if value < &0 {
 ///         let value_clone = *value;
-///         Err(ValidationError::new(key.clone()).with_message(move |key| {
-///             format!(
-///                 "The value of {} ({}) cannot be less than 0",
-///                 key, value_clone
-///             )
+///         Err(ValidationError::new(key.clone(), "NOT_LESS_THAN_0")
+///             .with_message(move |key| {
+///                 format!(
+///                     "The value of {} ({}) cannot be less than 0",
+///                     key, value_clone
+///                 )
 ///         }).into()) // convert into ValidationErrors
 ///     } else {
 ///         Ok(())
@@ -32,11 +33,12 @@ use futures::future::join_all;
 /// .validation(|value: &i32, key: &String| {
 ///     if value > &10 {
 ///         let value_clone = *value;
-///         Err(ValidationError::new(key.clone()).with_message(move |key| {
-///             format!(
-///                 "The value of {} ({}) cannot be greater than 10",
-///                 key, value_clone
-///             )
+///         Err(ValidationError::new(key.clone(), "NOT_GREATER_THAN_10")
+///             .with_message(move |key| {
+///                 format!(
+///                     "The value of {} ({}) cannot be greater than 10",
+///                     key, value_clone
+///                 )
 ///         }).into())
 ///     } else {
 ///         Ok(())
@@ -44,9 +46,22 @@ use futures::future::join_all;
 /// });
 ///
 /// let key = "field1".to_string();
-/// assert!(v.validate_value(&11, &key).is_err());
+///
+/// {
+///     let errors = v.validate_value(&11, &key).unwrap_err();
+///     assert_eq!(1, errors.len());
+///     let error = errors.errors.get(0).unwrap();
+///     assert_eq!("NOT_GREATER_THAN_10", error.type_id);
+/// }
+
 /// assert!(v.validate_value(&5, &key).is_ok());
-/// assert!(v.validate_value(&-1, &key).is_err());
+///
+/// {
+///     let errors = v.validate_value(&-1, &key).unwrap_err();
+///     assert_eq!(1, errors.len());
+///     let error = errors.errors.get(0).unwrap();
+///     assert_eq!("NOT_LESS_THAN_0", error.type_id);
+/// }
 /// ```
 #[derive(Clone, Debug)]
 pub struct Validator<Value, Key> {
@@ -132,7 +147,7 @@ impl<Value, Key> Default for Validator<Value, Key> {
 ///         let key = key.clone();
 ///         Box::pin(async move {
 ///             if value < 0 {
-///                 Err(ValidationError::new(key.clone())
+///                 Err(ValidationError::new(key.clone(), "NOT_LESS_THAN_0")
 ///                     .with_message(move |key| {
 ///                         format!("The value of {} ({}) cannot be less than 0", key, value)
 ///                     })
@@ -146,7 +161,7 @@ impl<Value, Key> Default for Validator<Value, Key> {
 ///     .validation(ValidatorFn::new(|value: &i32, key: &String| {
 ///         if value > &10 {
 ///             let value_clone = *value;
-///             Err(ValidationError::new(key.clone())
+///             Err(ValidationError::new(key.clone(), "NOT_GREATER_THAN_10")
 ///                 .with_message(move |key| {
 ///                     format!(
 ///                         "The value of {} ({}) cannot be greater than 10",
@@ -159,9 +174,21 @@ impl<Value, Key> Default for Validator<Value, Key> {
 ///         }
 ///     }));
 /// let key = "field1".to_string();
-/// assert!(block_on(v.validate_value(&11, &key)).is_err());
+/// {
+///     let errors = block_on(v.validate_value(&11, &key)).unwrap_err();
+///     assert_eq!(1, errors.len());
+///     let error = errors.errors.get(0).unwrap();
+///     assert_eq!("NOT_GREATER_THAN_10", error.type_id);
+/// }
+///
 /// assert!(block_on(v.validate_value(&5, &key)).is_ok());
-/// assert!(block_on(v.validate_value(&-1, &key)).is_err());
+///
+/// {
+///     let errors = block_on(v.validate_value(&-1, &key)).unwrap_err();
+///     assert_eq!(1, errors.len());
+///     let error = errors.errors.get(0).unwrap();
+///     assert_eq!("NOT_LESS_THAN_0", error.type_id);
+/// }
 /// ```
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
@@ -265,7 +292,7 @@ mod test {
                 .validation(|value: &i32, key: &String| {
                     if value < &0 {
                         let value_clone = *value;
-                        Err(ValidationError::new(key.clone())
+                        Err(ValidationError::new(key.clone(), "NOT_LESS_THAN_0")
                             .with_message(move |key| {
                                 format!(
                                     "The value of {} ({}) cannot be less than 0",
@@ -280,7 +307,7 @@ mod test {
                 .validation(|value: &i32, key: &String| {
                     if value > &10 {
                         let value_clone = *value;
-                        Err(ValidationError::new(key.clone())
+                        Err(ValidationError::new(key.clone(), "NOT_GREATER_THAN_10")
                             .with_message(move |key| {
                                 format!(
                                     "The value of {} ({}) cannot be greater than 10",
@@ -297,9 +324,19 @@ mod test {
             let av: AsyncValidator<i32, String> = v.into();
 
             let key = "field1".to_string();
-            assert!(block_on(av.validate_value(&11, &key)).is_err());
+            {
+                let errors = block_on(av.validate_value(&11, &key)).unwrap_err();
+                assert_eq!(1, errors.len());
+                let error = errors.errors.get(0).unwrap();
+                assert_eq!("NOT_GREATER_THAN_10", error.type_id);
+            }
             assert!(block_on(av.validate_value(&5, &key)).is_ok());
-            assert!(block_on(av.validate_value(&-1, &key)).is_err());
+            {
+                let errors = block_on(av.validate_value(&-1, &key)).unwrap_err();
+                assert_eq!(1, errors.len());
+                let error = errors.errors.get(0).unwrap();
+                assert_eq!("NOT_LESS_THAN_0", error.type_id);
+            }
         }
     }
 }

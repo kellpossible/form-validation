@@ -7,6 +7,8 @@ use std::{
 pub struct ValidationError<Key> {
     /// The key for the field that this validation error is associated with.
     pub key: Key,
+    /// An identifier for the type of error this is.
+    pub type_id: &'static str,
     /// Function that produces the error message.
     message: Rc<dyn Fn(&Key) -> String>,
 }
@@ -18,17 +20,21 @@ where
     fn clone(&self) -> Self {
         Self {
             key: self.key.clone(),
+            type_id: self.type_id.clone(),
             message: self.message.clone(),
         }
     }
 }
 
 impl<Key> ValidationError<Key> {
-    /// Create a new `ValidationError` with a generic message.
-    pub fn new(key: Key) -> Self {
+    /// Create a new `ValidationError` with a generic message, and
+    /// specify the [type_id](ValidationError::type_id) which allows
+    /// the error type to be identified programatically.
+    pub fn new(key: Key, type_id: &'static str) -> Self {
         Self {
             key,
             message: Rc::new(|_| "Validation error".to_string()),
+            type_id,
         }
     }
 
@@ -47,13 +53,15 @@ impl<Key> ValidationError<Key> {
     /// use form_validation::ValidationError;
     ///
     /// let value = -10;
-    /// let error = ValidationError::new("field1").with_message(move |key| {
-    ///     format!(
-    ///         "The value of {} ({}) cannot be less than 0",
-    ///          key, value)
+    /// let error = ValidationError::new("field1", "NOT_LESS_THAN_0")
+    ///     .with_message(move |key| {
+    ///         format!(
+    ///            "The value of {} ({}) cannot be less than 0",
+    ///             key, value)
     /// });
     ///
     /// assert_eq!("The value of field1 (-10) cannot be less than 0", error.to_string());
+    /// assert_eq!("NOT_LESS_THAN_0", error.type_id);
     /// ```
     pub fn with_message<F: Fn(&Key) -> String + 'static>(mut self, message_fn: F) -> Self {
         self.message = Rc::new(message_fn);
@@ -79,8 +87,9 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ValidationError{{ key: {0:?}, message: {1} }}",
+            "ValidationError{{ key: {0:?}, type_id: {1}, message: {2} }}",
             self.key,
+            self.type_id,
             self.get_message()
         )
     }
