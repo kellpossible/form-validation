@@ -20,7 +20,7 @@ where
     fn clone(&self) -> Self {
         Self {
             key: self.key.clone(),
-            type_id: self.type_id.clone(),
+            type_id: self.type_id,
             message: self.message.clone(),
         }
     }
