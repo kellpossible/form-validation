@@ -13,6 +13,17 @@ pub struct ValidationError<Key> {
     message: Rc<dyn Fn(&Key) -> String>,
 }
 
+impl<Key> PartialEq for ValidationError<Key>
+where
+    Key: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key
+            && self.type_id == other.type_id
+            && self.get_message() == other.get_message()
+    }
+}
+
 impl<Key> Clone for ValidationError<Key>
 where
     Key: Clone,
@@ -102,6 +113,15 @@ impl<Key> std::error::Error for ValidationError<Key> where Key: Debug {}
 #[derive(Debug, Clone)]
 pub struct ValidationErrors<Key> {
     pub errors: Vec<ValidationError<Key>>,
+}
+
+impl<Key> PartialEq for ValidationErrors<Key>
+where
+    Key: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.errors.eq(&other.errors)
+    }
 }
 
 impl<Key> ValidationErrors<Key>
